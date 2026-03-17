@@ -7,11 +7,11 @@ use super::prelude::*;
 
 pub struct Ios;
 
-// m119: The use of value() in `effects/SkImageFilters.h` requires iOS12
-const MIN_IOS_VERSION: &str = "12";
-const MIN_IOS_VERSION_M1: &str = "14";
+// Graphite Metal backend requires iOS 14+, targeting iOS 17 for modern features
+const MIN_IOS_VERSION: &str = "17";
+const MIN_IOS_VERSION_M1: &str = "17";
 // m100: XCode 13.2 fails to build with version 13
-const MIN_IOS_VERSION_CATALYST: &str = "14";
+const MIN_IOS_VERSION_CATALYST: &str = "17";
 
 impl PlatformDetails for Ios {
     fn uses_freetype(&self) -> bool {
