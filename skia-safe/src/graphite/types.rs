@@ -96,7 +96,7 @@ impl Default for SubmitInfo {
 }
 
 impl SubmitInfo {
-    /// Create new submit info with default settings
+    /// Create new submit info with default settings (async, no sync)
     pub fn new() -> Self {
         let inner = unsafe {
             let mut inner = std::mem::MaybeUninit::uninit();
@@ -104,6 +104,20 @@ impl SubmitInfo {
             inner.assume_init()
         };
         Self { inner }
+    }
+
+    /// Create submit info with specified sync behavior.
+    ///
+    /// When `sync` is `SyncToCpu::Yes`, the submit will block until
+    /// all GPU work completes. This prevents resource buildup but
+    /// may reduce throughput.
+    pub fn with_sync(sync: SyncToCpu) -> Self {
+        let mut info = Self::new();
+        info.inner.fSync = match sync {
+            SyncToCpu::Yes => sb::skgpu_graphite_SyncToCpu::kYes,
+            SyncToCpu::No => sb::skgpu_graphite_SyncToCpu::kNo,
+        };
+        info
     }
 
     pub(crate) fn native(&self) -> &sb::skgpu_graphite_SubmitInfo {

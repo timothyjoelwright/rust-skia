@@ -1,4 +1,4 @@
-use crate::graphite::{InsertRecordingInfo, InsertStatus, Recorder, RecorderOptions, SubmitInfo};
+use crate::graphite::{InsertRecordingInfo, InsertStatus, Recorder, RecorderOptions, SubmitInfo, SyncToCpu};
 use crate::prelude::*;
 use skia_bindings as sb;
 use std::fmt;
@@ -74,28 +74,35 @@ impl Context {
         unsafe { sb::C_Context_submit(self.native_mut_force(), info_ptr) }
     }
 
-    /// Submit work and wait for completion
+    /// Submit work and block until GPU completion.
     ///
-    /// This is a convenience method that calls `submit()` followed by
-    /// `check_async_work_completion()`.
+    /// This performs a synchronous submit that waits for all GPU work
+    /// to complete before returning. Use this to prevent resource buildup
+    /// when rendering faster than the GPU can process.
     ///
     /// # Returns
-    /// `true` if submission and completion were successful
+    /// `true` if submission was successful
     pub fn submit_and_wait(&self) -> bool {
-        self.submit(None) && self.check_async_work_completion()
+        let sync_info = SubmitInfo::with_sync(SyncToCpu::Yes);
+        self.submit(Some(&sync_info))
     }
 
     /// Check if any pending asynchronous work has completed
     ///
     /// This method polls for completion of GPU work that was previously submitted.
-    ///
-    /// # Returns
-    /// `true` if all pending work has completed
-    pub fn check_async_work_completion(&self) -> bool {
+    /// It releases resources from completed work but does not block.
+    pub fn check_async_work_completion(&self) {
         unsafe {
             sb::C_Context_checkAsyncWorkCompletion(self.native_mut_force());
         }
-        true
+    }
+
+    /// Check if there is unfinished GPU work pending.
+    ///
+    /// # Returns
+    /// `true` if there is still GPU work in flight
+    pub fn has_unfinished_gpu_work(&self) -> bool {
+        unsafe { sb::skgpu_graphite_Context_hasUnfinishedGpuWork(self.native()) }
     }
 
     /// Delete a backend texture that was created through this context
